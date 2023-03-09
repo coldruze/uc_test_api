@@ -6,6 +6,8 @@ class Controller {
     async registration(req, res) {
         try {
             const {email, password} = req.body;
+            let data = await User.find();
+            console.log(data);
             const candidate = await User.findOne({email});
             if (candidate) return res.status(400).json({message: "Пользователь с такой почтой уже зарегистрирован"});
             const hashPassword = bcrypt.hashSync(password, 3);
