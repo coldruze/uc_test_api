@@ -3,13 +3,14 @@ const express = require("express"),
       router = require("./routes/routes"),
       mongoose = require("mongoose"),
       cors = require("cors"),
-      jwt = require("jsonwebtoken")
+      cookieParser = require("cookie-parser")
       
       
 const app = express();
 const port = config.port;
 
 
+app.use(cookieParser());
 app.use(cors());
 app.use(express.json());
 app.use("", router);
