@@ -1,4 +1,5 @@
 const UserModel = require("../models/user"),
+      TokenModel = require("../models/token"),
       bcrypt = require("bcryptjs"),
       TokenService = require("../services/token-service"),
       UserDto = require("../dto/userDto"),
@@ -6,6 +7,13 @@ const UserModel = require("../models/user"),
 
 
 class UserService {
+    async createTokens(userDto) {
+        const tokens = TokenService.generateTokens({...userDto});
+        await TokenService.saveToken(userDto.id, tokens.refreshToken);
+
+        return {...tokens};
+    }
+
     async registration(email, password) {
         const candidate = await UserModel.findOne({email});
         if (candidate) {
@@ -16,27 +24,58 @@ class UserService {
         const user = await UserModel.create({email, password: hashPassword});
 
         const userDto = new UserDto(user);
-        const tokens = TokenService.generateTokens({...UserDto});
-        await TokenService.saveToken(userDto.id, tokens.refreshToken);
+        const tokens = this.createTokens(userDto);
 
-        return {...tokens};
+        return tokens;
     }
 
     async login(email, password) {
-        
+        const user = await UserModel.findOne({email});
+        if (!user) {
+            throw new CustomException(email, "Пользователя с такой почтой нет");
+        }
+
+        const isPassEquals = await bcrypt.compare(password, user.password);
+        if (!isPassEquals) {
+            throw new CustomException("Введен неверный пароль");
+        }
+
+        const token = await TokenModel.findOne({user: user._id});
+
+        return token;
     }
 
-    async getUser(email) {
+    async refresh(refreshToken) {
+        if (!refreshToken) {
+            throw new CustomException("Пользователь не авторизован");
+        }
+
+        const data = TokenService.validateRefreshToken(refreshToken);
+        const foundToken = await TokenService.findToken(refreshToken);
+        if (!data || !foundToken) {
+            throw new CustomException("Ошибка");
+        }
         
+        const user = await UserModel.findOne({_id: foundToken[0].user});
+        const userDto = new UserDto(user);
+        const tokens = this.createTokens(userDto);
+
+        return userDto;
     }
 
-    async getLatency(req, res) {
-        
+    async getUser(refreshToken) {
+        const userDto = await this.refresh(refreshToken);
+        return userDto.email;
     }
 
-    async logout(req, res) {
-        
+    async getLatency(refreshToken) {
+
+        await this.refresh(refreshToken);
+    }
+
+    async logout(refreshToken) {
+        await TokenService.removeToken(refreshToken);
     }
 }
 
-module.exports = new UserService();
+module.exports = new UserService;

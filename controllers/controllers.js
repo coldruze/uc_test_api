@@ -24,40 +24,52 @@ class Controller {
 
     async login(req, res) {
         try {
-            
+            const {email, password} = req.body;
+            const userData = await UserService.login(email, password);
+
+            res.cookie("refreshToken", userData.refreshToken, {maxAge: 30 * 24 * 60 * 60 * 1000, httpOnly: true});
+            return res.json(userData);
         } catch (error) {
-            
+            console.log(error);
+            return res.status(400).json({message: "Ошибка при авторизации"});
         }
     }
 
     async getUser(req, res) {
         try {
-            const data = await User.find();
-            const users =[];
-            for (let user of data) {
-                users.push(user.email);
+            const {refreshToken} = req.cookies;
+            const data = await UserService.getUser(refreshToken);
+            if (!data) {
+                return res.status(400).json({message: "Ошибка при получении данных пользователя", errors});
             }
-            return res.send(users);
+            return res.json(data);
         } catch (error) {
             console.log(error);
+            return res.status(400).json({message: "Ошибка при получении данных пользователя"});
         }
     }
 
     async getLatency(req, res) {
         try {
-            
+            const {refreshToken} = req.cookies;
+            await UserService.getLatency(refreshToken);
         } catch (error) {
-            
+            console.log(error);
+            return res.status(400).json({message: "Ошибка при получении задержки"});
         }
     }
 
     async logout(req, res) {
         try {
-            
+            const {refreshToken} = req.cookies;
+            await UserService.logout(refreshToken);
+            res.clearCookie("refreshToken");
+            res.status(200).json({message: "Успешный выход с аккаунта"});
         } catch (error) {
-            
+            console.log(error);
+            return res.status(400).json({message: "Ошибка при выходе с аккаунта"});
         }
     }
 }
 
-module.exports = new Controller();
+module.exports = new Controller;
