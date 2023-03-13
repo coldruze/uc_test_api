@@ -1,52 +1,43 @@
 const jwt = require("jsonwebtoken"),
-      {access_secret, refresh_secret} = require("../config.json"),
+      {secret} = require("../config.json"),
       tokenModel = require("../models/token")
 
 
 class TokenService {
     generateTokens(payload) {
-        const accessToken = jwt.sign(payload, access_secret, {expiresIn: "600000"});
-        const refreshToken = jwt.sign(payload, refresh_secret, {expiresIn: "30d"});
+        const token = jwt.sign(payload, secret, {expiresIn: "600000"});
         return {
-            accessToken,
-            refreshToken
+            token
         }
     }
 
-    validateAccessToken(token) {
+    validateToken(token) {
         try {
-            const data = jwt.verify(token, access_secret);
+            const data = jwt.verify(token, secret);
             return data;
         } catch (error) {
             return null;
         }
     }
 
-    validateRefreshToken(token) {
-        try {
-            const data = jwt.verify(token, refresh_secret);
-            return data;
-        } catch (error) {
-            return null;
-        }
-    }
-
-    async saveToken(userId, refreshToken) {
+    async saveToken(userId, token) {
         const tokenData = await tokenModel.findOne({user: userId});
         if (tokenData) {
-            tokenData.refreshToken = refreshToken;
-            return tokenData.save();
+            tokenData.token = token;
+            // return tokenData.save();
+            tokenData.save();
         }
-        const token = await tokenModel.create({user: userId, refreshToken});
-        return token;
+        await tokenModel.create({user: userId, token});
+        // const accessToken = await tokenModel.create({user: userId, token});
+        // return accessToken;
     }
 
-    async removeToken(refreshToken) {
-        await tokenModel.deleteOne({refreshToken});
+    async removeToken(token) {
+        await tokenModel.deleteOne({token});
     }
 
     async findToken(token) {
-        const data = await tokenModel.find({refreshToken: token});
+        const data = await tokenModel.find({token: token});
         return data;
     }
 }

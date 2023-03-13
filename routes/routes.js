@@ -10,7 +10,6 @@ router.post("/signup", [
     check("password", "Пароль должен быть не короче 4 символов").isLength({min: 4})
 ], controller.registration);
 router.get("/info", controller.getUser);
-router.get("/latency", controller.getLatency);
 router.get("/logout", controller.logout);
 
 

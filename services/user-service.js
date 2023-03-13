@@ -7,13 +7,6 @@ const UserModel = require("../models/user"),
 
 
 class UserService {
-    async createTokens(userDto) {
-        const tokens = TokenService.generateTokens({...userDto});
-        await TokenService.saveToken(userDto.id, tokens.refreshToken);
-
-        return {...tokens};
-    }
-
     async registration(email, password) {
         const candidate = await UserModel.findOne({email});
         if (candidate) {
@@ -24,9 +17,9 @@ class UserService {
         const user = await UserModel.create({email, password: hashPassword});
 
         const userDto = new UserDto(user);
-        const tokens = this.createTokens(userDto);
+        const token = this.createTokens(userDto);
 
-        return tokens;
+        return token;
     }
 
     async login(email, password) {
@@ -45,37 +38,48 @@ class UserService {
         return token;
     }
 
-    async refresh(refreshToken) {
-        if (!refreshToken) {
+    async createTokens(userDto) {
+        const accessToken = TokenService.generateTokens({...userDto});
+        await TokenService.saveToken(userDto.id, accessToken.token);
+
+        return accessToken;
+    }
+
+    // async refresh(token) {
+    //     if (!token) {
+    //         throw new CustomException("Пользователь не авторизован");
+    //     }
+
+    //     const data = TokenService.validateToken(token);
+    //     const foundToken = await TokenService.findToken(token);
+    //     if (!data || !foundToken) {
+    //         throw new CustomException("Ошибка");
+    //     }
+        
+    //     const user = await UserModel.findOne({_id: foundToken[0].user});
+    //     const userDto = new UserDto(user);
+    //     const tokens = this.createTokens(userDto);
+
+    //     return userDto;
+    // }
+
+    async getUser(token) {
+        if (!token) {
             throw new CustomException("Пользователь не авторизован");
         }
-
-        const data = TokenService.validateRefreshToken(refreshToken);
-        const foundToken = await TokenService.findToken(refreshToken);
+        const data = TokenService.validateToken(token);
+        const foundToken = await TokenService.findToken(token);
         if (!data || !foundToken) {
             throw new CustomException("Ошибка");
         }
-        
         const user = await UserModel.findOne({_id: foundToken[0].user});
         const userDto = new UserDto(user);
-        const tokens = this.createTokens(userDto);
-
-        return userDto;
-    }
-
-    async getUser(refreshToken) {
-        const userDto = await this.refresh(refreshToken);
         return userDto.email;
     }
 
-    async getLatency(refreshToken) {
-
-        await this.refresh(refreshToken);
-    }
-
-    async logout(refreshToken) {
-        await TokenService.removeToken(refreshToken);
-    }
+    // async logout(token) {
+    //     await TokenService.removeToken(token);
+    // }
 }
 
 module.exports = new UserService;

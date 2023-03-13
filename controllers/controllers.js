@@ -13,8 +13,8 @@ class Controller {
             const {email, password} = req.body;
             const userData = await UserService.registration(email, password);
 
-            res.cookie("refreshToken", userData.refreshToken, {maxAge: 30 * 24 * 60 * 60 * 1000, httpOnly: true});
-            return res.json(userData.accessToken);
+            res.cookie("token", userData.token, {maxAge: 600000, httpOnly: true});
+            return res.json(userData.token);
 
         } catch (error) {
             console.log(error);
@@ -27,7 +27,7 @@ class Controller {
             const {email, password} = req.body;
             const userData = await UserService.login(email, password);
 
-            res.cookie("refreshToken", userData.refreshToken, {maxAge: 30 * 24 * 60 * 60 * 1000, httpOnly: true});
+            res.cookie("token", userData.token, {maxAge: 600000, httpOnly: true});
             return res.json(userData);
         } catch (error) {
             console.log(error);
@@ -37,8 +37,10 @@ class Controller {
 
     async getUser(req, res) {
         try {
-            const {refreshToken} = req.cookies;
-            const data = await UserService.getUser(refreshToken);
+            const {token} = req.cookies;
+            res.cookie("token", token, {maxAge: 600000, httpOnly: true});
+
+            const data = await UserService.getUser(token);
             if (!data) {
                 return res.status(400).json({message: "Ошибка при получении данных пользователя", errors});
             }
@@ -49,21 +51,9 @@ class Controller {
         }
     }
 
-    async getLatency(req, res) {
-        try {
-            const {refreshToken} = req.cookies;
-            await UserService.getLatency(refreshToken);
-        } catch (error) {
-            console.log(error);
-            return res.status(400).json({message: "Ошибка при получении задержки"});
-        }
-    }
-
     async logout(req, res) {
         try {
-            const {refreshToken} = req.cookies;
-            await UserService.logout(refreshToken);
-            res.clearCookie("refreshToken");
+            res.clearCookie("token");
             res.status(200).json({message: "Успешный выход с аккаунта"});
         } catch (error) {
             console.log(error);
